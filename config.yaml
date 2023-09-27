@@ -1,0 +1,29 @@
+batch_size: 32
+length: 256 #this is crop size
+epochs: 401
+steps_per_epoch: 128
+
+print_frequency: 10
+save_frequency: 10
+
+samples_dir: './samples'
+weights_dir: './weights'
+
+learning_rate: 0.0004
+checkpoint: None
+
+noDecom: False
+
+#New parts
+dataset_dir: '/home/aabid/Documents/Datasets/LOLdataset'
+dataset_decom_dir: '/home/aabid/Documents/Datasets/LOLdataset_decom'
+#dataloader main func paths , also used in decom_trainer
+root_path_train: '/home/aabid/Documents/Datasets/LOLdataset/our485'
+root_path_test: '/home/aabid/Documents/Datasets/LOLdataset/eval15'
+
+decom_net_path: './weights/decom_net.pth'
+illum_net_path: './weights/illum_net.pth'
+restore_net_path: './weights/restore_net.pth'
+
+root_path_train_decomposed: '/home/aabid/Documents/Datasets/LOLdataset_decom/our485'
+root_path_test_decomposed: '/home/aabid/Documents/Datasets/LOLdataset_decom/eval15'
