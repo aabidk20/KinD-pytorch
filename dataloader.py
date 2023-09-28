@@ -105,7 +105,7 @@ class LOLDataset(Dataset):
             if self.training is True:
                 lr_crop = lr_img.crop(crop_box)
                 hr_crop = hr_img.crop(crop_box)
-                rand_mode = np.random.randint(0, 8)  # BUG: why 7? should be 8?
+                rand_mode = np.random.randint(0, 8)
                 lr_crop = data_augmentation(lr_crop, rand_mode)
                 hr_crop = data_augmentation(hr_crop, rand_mode)
 
@@ -191,7 +191,7 @@ class LOLDataset_Decom(Dataset):
                 lr_crop_I = lr_crop_I.crop(crop_box)
                 hr_crop_R = hr_crop_R.crop(crop_box)
                 hr_crop_I = hr_crop_I.crop(crop_box)
-                rand_mode = np.random.randint(0, 7)
+                rand_mode = np.random.randint(0, 8)
                 lr_crop_R = data_augmentation(lr_crop_R, rand_mode)
                 lr_crop_I = data_augmentation(lr_crop_I, rand_mode)
                 hr_crop_R = data_augmentation(hr_crop_R, rand_mode)

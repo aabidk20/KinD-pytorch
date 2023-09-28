@@ -13,6 +13,12 @@ import time
 
 def log(string):
     print(time.strftime('%H:%M:%S'), ">> ", string)
+    if os.path.exists('log.txt'):
+        with open('log.txt', 'a') as f:
+            f.write(time.strftime('%H:%M:%S') + ">> " + string + '\n')
+    else:
+        with open('log.txt', 'w') as f:
+            f.write(time.strftime('%H:%M:%S') + ">> " + string + '\n')
 
 def data_augmentation(image, mode):
     if mode == 0:
