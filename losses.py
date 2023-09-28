@@ -169,6 +169,12 @@ class RestoreLoss(nn.Module):
 
     def grad_loss(self, low, high):
         # WARN: grayscale conversion in original code
+        low = 0.299 * low[:, 0, :, :] + 0.587 * low[:, 1, :, :] + 0.114 * low[:, 2, :, :]
+        low = low.unsqueeze(dim=1)
+
+        high = 0.299 * high[:, 0, :, :] + 0.587 * high[:, 1, :, :] + 0.114 * high[:, 2, :, :]
+        high = high.unsqueeze(dim=1)
+
         x_loss = torch.square(gradient(low, 'x') - gradient(high, 'x'))
         y_loss = torch.square(gradient(low, 'y') - gradient(high, 'y'))
         grad_loss_all = torch.mean(x_loss + y_loss)
