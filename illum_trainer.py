@@ -194,6 +194,9 @@ if __name__ == '__main__':
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
+    weight_dir = config['weights_dir']
+    if not os.path.exists(weight_dir):
+        os.makedirs(weight_dir)
     if args.checkpoint is not None:
         if config['noDecom'] is False:
             decom_net = load_weights(decom_net, path=config['decom_net_path'])

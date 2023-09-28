@@ -76,12 +76,12 @@ class DecomTrainer(BaseTrainer):
 
                 if iter % self.save_frequency == 0:
                     torch.save(self.model.state_dict(), './weights/decom_net.pth')
-                    log(f'Checkpoint {iter} saved !')
+                    log(f'Checkpoint {iter} saved for decom net!')
                 scheduler.step()
                 iter_end_time = time.time()
                 log(f'Time taken: {iter_end_time - iter_start_time} seconds\t lr: {scheduler.get_last_lr()}')
         except KeyboardInterrupt:
-            torch.save(self.model.state_dict(), f'./weights/decom_{iter}_{idx}_inter.pth')
+            torch.save(self.model.state_dict(), f'./weights/decom_{iter}_inter.pth')
             log('Saved model before quit')
             try:
                 sys.exit(0)
@@ -129,6 +129,10 @@ if __name__ == '__main__':
     args.checkpoint = None
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+
+    weight_dir = config['weights_dir']
+    if not os.path.exists(weight_dir):
+        os.makedirs(weight_dir)
     if args.checkpoint is not None:
         pretrain = torch.load(config['decom_net_path'])  # WARN: modified path
         model.load_state_dict(pretrain)
