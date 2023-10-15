@@ -136,10 +136,10 @@ class RestoreNet_Unet(nn.Module):
         self.concat_5 = Concat()
 
         self.conv_and_relu_17 = Conv2DandReLU(filters * 2, filters)
-        self.conv_and_relu_18 = Conv2DandReLU(filters, filters * 8)
+        self.conv_and_relu_18 = Conv2DandReLU(filters, filters)
         # WARN: Paper has 256 in output, but implementation has 32 here. We are using 256
 
-        self.conv_1 = nn.Conv2d(filters * 8, 3, kernel_size=3, stride=1, padding=1) # WARN: padding
+        self.conv_1 = nn.Conv2d(filters, 3, kernel_size=3, stride=1, padding=1) # WARN: padding
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, R, I):
@@ -174,22 +174,22 @@ class RestoreNet_Unet(nn.Module):
         re_conv5_1 = self.conv_and_relu_9(re_pool4)
         re_conv5_2 = self.conv_and_relu_10(re_conv5_1)
         re_up1 = self.deconv_1(re_conv5_2)
-        re_concat2 = self.concat_2(re_up1, re_conv4_2)
+        re_concat2 = self.concat_2(re_conv4_2, re_up1)
 
         re_conv6_1 = self.conv_and_relu_11(re_concat2)
         re_conv6_2 = self.conv_and_relu_12(re_conv6_1)
         re_up2 = self.deconv_2(re_conv6_2)
-        re_concat3 = self.concat_3(re_up2, re_conv3_2)
+        re_concat3 = self.concat_3(re_conv3_2, re_up2)
 
         re_conv7_1 = self.conv_and_relu_13(re_concat3)
         re_conv7_2 = self.conv_and_relu_14(re_conv7_1)
         re_up3 = self.deconv_3(re_conv7_2)
-        re_concat4 = self.concat_4(re_up3, re_conv2_2)
+        re_concat4 = self.concat_4(re_conv2_2, re_up3)
 
         re_conv8_1 = self.conv_and_relu_15(re_concat4)
         re_conv8_2 = self.conv_and_relu_16(re_conv8_1)
         re_up4 = self.deconv_4(re_conv8_2)
-        re_concat5 = self.concat_5(re_up4, re_conv1_2)
+        re_concat5 = self.concat_5(re_conv1_2, re_up4)
 
         re_conv9_1 = self.conv_and_relu_17(re_concat5)
         re_conv9_2 = self.conv_and_relu_18(re_conv9_1)

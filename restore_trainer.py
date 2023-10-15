@@ -151,21 +151,21 @@ if __name__ == '__main__':
     parser = BaseParser()
     args = parser.parse()
 
-    args.checkpoint = None
+    # args.checkpoint = None
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     weight_dir = config['weights_dir']
     if not os.path.exists(weight_dir):
         os.makedirs(weight_dir)
-    if args.checkpoint is not None:
+    if config['checkpoint'] is True:
         if config['noDecom'] is False:
             pretrain_decom = torch.load(config['decom_net_path'])# WARN: changed path
             decom_net.load_state_dict(pretrain_decom)
-            log('DecomNet loaded from decom_net.pth')
-        pretrain = torch.load(config['restore_net_path'])# WARN: changed path
-        model.load_state_dict(pretrain)
-        log('RestoreNet loaded from restore_net.pth')
+            log(f'DecomNet loaded from {config["decom_net_path"]}')
+        # pretrain = torch.load(config['restore_net_path'])# WARN: changed path
+        # model.load_state_dict(pretrain)
+        # log('RestoreNet loaded from restore_net.pth')
 
     if config['noDecom'] is True:
         # WARN: Different from the original code

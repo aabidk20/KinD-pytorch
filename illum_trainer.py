@@ -79,9 +79,9 @@ class Illum_Trainer(BaseTrainer):
                         L_high = L_high_tensor.to(self.device)
 
                         #WARN: Turned off grad tracking
-                        # with torch.no_grad():
-                        R_low, I_low = self.decom_net(L_low)
-                        R_high, I_high = self.decom_net(L_high)
+                        with torch.no_grad():
+                            R_low, I_low = self.decom_net(L_low)
+                            R_high, I_high = self.decom_net(L_high)
 
                         bright_low = torch.mean(I_low)
                         bright_high = torch.mean(I_high)
@@ -96,8 +96,9 @@ class Illum_Trainer(BaseTrainer):
                                self.loss_fn(I_high2low_map, I_low, hook=hook_number)
 
                         if idx % 30 == 0:
-                            log(f'Iter: {iter}_{idx} \t average_loss: {loss.item():.6f}')
-                            print(ratio_high2low, ratio_low2high)
+                            log(f'Epoch: {iter} | Step: {idx} \t average_loss: {loss.item():.6f}')
+                            # print(ratio_high2low, ratio_low2high)
+                            log(f'ratio_high2low = {ratio_high2low.item()}, ratio_low_2high = {ratio_low2high.item()}')
                         loss.backward()
                         optimizer.step()
                         idx += 1
@@ -189,7 +190,7 @@ if __name__ == '__main__':
 
     parser = BaseParser()
     args = parser.parse()
-    args.checkpoint = None
+    # args.checkpoint = None
 
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -197,12 +198,12 @@ if __name__ == '__main__':
     weight_dir = config['weights_dir']
     if not os.path.exists(weight_dir):
         os.makedirs(weight_dir)
-    if args.checkpoint is not None:
+    if config['checkpoint'] is True:
         if config['noDecom'] is False:
             decom_net = load_weights(decom_net, path=config['decom_net_path'])
             log('DecomNet loaded from decom_net.pth')
-        model = load_weights(model, path=config['illum_net_path'])
-        log('IllumNet loaded from illum_net.pth')
+        # model = load_weights(model, path=config['illum_net_path'])
+        # log('IllumNet loaded from illum_net.pth')
 
     if config['noDecom'] is True:
         # WARN: Different from the original code

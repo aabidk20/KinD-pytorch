@@ -8,7 +8,9 @@ class BaseParser:
     def parse(self):
         self.parser.add_argument("--mode",default="train", choices=["train", "test"])
         self.parser.add_argument("--config", default="config.yaml", help="path to config file")
-        self.parser.add_argument("-c", "--checkpoint", default="./weights/",
-                                 help="Path of checkpoints")
+        # self.parser.add_argument("-c", "--checkpoint", default="./weights/",
+        #                          help="Path of checkpoints")
+        self.parser.add_argument("-c", "--checkpoint", default=True,
+                                 help="Boolean flag to load checkpoint")
         # BUG: why is default for checkpoint True? is it a flag?
         return self.parser.parse_args()

@@ -109,6 +109,7 @@ if __name__ == "__main__":
     log('Model loaded from illum_net.pth')
 
     log("Buliding Dataset...")
+    log(f"{input_dir}")
     dst = CustomDataset(input_dir)
     log(f"There are {len(dst)} images in the input direction...")
     dataloader = DataLoader(dst, batch_size=1)

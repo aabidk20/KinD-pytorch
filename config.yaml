@@ -10,7 +10,8 @@ samples_dir: './samples'
 weights_dir: './weights'
 
 learning_rate: 0.0004
-checkpoint: None
+#checkpoint: None
+checkpoint: True
 
 noDecom: False
 
