@@ -56,9 +56,9 @@ class DecomNet(nn.Module):
         decom_i_conv1 = self.conv_and_relu_i1(decom_conv1)
         decom_i_conv2 = self.concat_i1(decom_i_conv1, decom_conv5)
         decom_i_conv3 = self.conv_i1(decom_i_conv2)
-        decom_I = self.sigmoid_i1(decom_i_conv3)
+        decom_L = self.sigmoid_i1(decom_i_conv3)
 
-        return decom_R, decom_I
+        return decom_R, decom_L
 
 
 class IllumNet(nn.Module):
@@ -75,17 +75,17 @@ class IllumNet(nn.Module):
         self.conv_1 = nn.Conv2d(filters, 1, kernel_size=3, stride=1, padding=1)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, I, ratio):
+    def forward(self, L, ratio):
         with torch.no_grad():
-            ratio_map = torch.ones_like(I) * ratio
-        adjust_concat1 = self.concat_1(I, ratio_map)
+            ratio_map = torch.ones_like(L) * ratio
+        adjust_concat1 = self.concat_1(L, ratio_map)
         adjust_conv1 = self.conv_and_relu_1(adjust_concat1)
         adjust_conv2 = self.conv_and_relu_2(adjust_conv1)
         adjust_conv3 = self.conv_and_relu_3(adjust_conv2)
         adjust_conv4 = self.conv_1(adjust_conv3)
-        adjust_I = self.sigmoid(adjust_conv4)
+        adjust_L = self.sigmoid(adjust_conv4)
         # print(f'{adjust_I.requires_grad=}')
-        return adjust_I
+        return adjust_L
 
 
 # NOTE: skipped Restorenet_msia and custom_illum classes
@@ -142,10 +142,10 @@ class RestoreNet_Unet(nn.Module):
         self.conv_1 = nn.Conv2d(filters, 3, kernel_size=3, stride=1, padding=1) # WARN: padding
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, R, I):
+    def forward(self, R, L):
         """
         R: output decom_conv_5 of DecomNet  #WARN should it be decom_conv_6 in paper?
-        I: output decom_i_conv3 of DecomNet
+        L: output decom_i_conv3 of DecomNet
         # WARN: in what order should they be concatenated?
         """
 
@@ -153,7 +153,7 @@ class RestoreNet_Unet(nn.Module):
         # re_concat1 = self.concat_1(x)
         #WARN: replacing above 2 lines with 1 below
         # print(f'{R.shape=}, {I.shape=}')
-        re_concat1 = self.concat_1(R, I)
+        re_concat1 = self.concat_1(R, L)
         # print(re_concat1.shape)
         re_conv1_1 = self.conv_and_relu_1(re_concat1)
         re_conv1_2 = self.conv_and_relu_2(re_conv1_1)
@@ -208,12 +208,12 @@ class KinD_noDecom(nn.Module):
         self.restore_net = RestoreNet_Unet(filters, activation) # WARN: params missing in original
         self.illum_net = IllumNet(filters, activation)
 
-    def forward(self, R, I, ratio):
-        I_final = self.illum_net(I, ratio)
-        R_final = self.restore_net(R, I) # WARN: should pass I or I_final?, (mostly I)
-        I_final_3 = torch.cat([I_final, I_final, I_final], dim=1)  # WARN: why dim=1?
-        out = I_final_3 * R_final
-        return R_final, I_final, out
+    def forward(self, R, L, ratio):
+        L_final = self.illum_net(L, ratio)
+        R_final = self.restore_net(R, L) # WARN: should pass I or I_final?, (mostly I)
+        L_final_3 = torch.cat([L_final, L_final, L_final], dim=1)  # WARN: why dim=1?
+        out = L_final_3 * R_final
+        return R_final, L_final, out
 
 
 class KinD(nn.Module):
@@ -228,10 +228,10 @@ class KinD(nn.Module):
         self.KinD_noDecom.restore_net = self.restore_net # NOTE: overwrite restore_net and illum_net?
         self.KinD_noDecom.illum_net = self.illum_net
 
-    def forward(self, L, ratio):
-        R, I = self.decom_net(L)
-        R_final, I_final, out = self.KinD_noDecom(R, I, ratio)
-        return R_final, I_final, out
+    def forward(self, I, ratio):
+        R, L = self.decom_net(I)
+        R_final, L_final, out = self.KinD_noDecom(R, L, ratio)
+        return R_final, L_final, out
 
 
 class KinD_plus(nn.Module):
@@ -241,35 +241,10 @@ class KinD_plus(nn.Module):
         self.restore_net = RestoreNet_Unet(filters, activation)
         self.illum_net = IllumNet(filters, activation)
 
-    def forward(self, L, ratio):
-        R, I = self.decom_net(L)
-        I_final = self.illum_net(I, ratio)
-        R_final = self.restore_net(R, I) # WARN: should pass I or I_final?
-        I_final_3 = torch.cat([I_final, I_final, I_final], dim=1)
-        out = I_final_3 * R_final
-        return R_final, I_final, out
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def forward(self, I, ratio):
+        R, L = self.decom_net(I)
+        L_final = self.illum_net(L, ratio)
+        R_final = self.restore_net(R, L) # WARN: should pass L or L_final?
+        L_final_3 = torch.cat([L_final, L_final, L_final], dim=1)
+        out = L_final_3 * R_final
+        return R_final, L_final, out

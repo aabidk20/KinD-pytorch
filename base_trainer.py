@@ -81,24 +81,24 @@ class BaseTrainer:
     def test(self, epoch=-1, plot_dir='./images/samples-illum', **kwargs):
         # WARN: no use of plotimage and saveimage params yet
         self.model.eval()
-        for R_low_tensor, I_low_tensor, R_high_tensor,I_high_tensor,name in self.dataloader_test:
-            I_low = I_low_tensor.to(self.device)
-            I_high = I_high_tensor.to(self.device)
+        for R_low_tensor, L_low_tensor, R_high_tensor,L_high_tensor,name in self.dataloader_test:
+            L_low = L_low_tensor.to(self.device)
+            L_high = L_high_tensor.to(self.device)
             with torch.no_grad():
-                ratio_high2low = torch.mean(torch.div((I_low +0.0001), (I_high + 0.0001)))
-                ratio_low2high = torch.mean(torch.div((I_high + 0.0001), (I_low + 0.0001)))
-                ratio_high2low_map =torch.ones_like(I_low) * ratio_high2low
-                ratio_low2high_map = torch.ones_like(I_high) * ratio_low2high
+                ratio_high2low = torch.mean(torch.div((L_low +0.0001), (L_high + 0.0001)))
+                ratio_low2high = torch.mean(torch.div((L_high + 0.0001), (L_low + 0.0001)))
+                ratio_high2low_map =torch.ones_like(L_low) * ratio_high2low
+                ratio_low2high_map = torch.ones_like(L_high) * ratio_low2high
 
-            I_low2highmap = self.model(I_low, ratio_low2high_map)
-            I_high2lowmap = self.model(I_high, ratio_high2low_map)
+            L_low2highmap = self.model(L_low, ratio_low2high_map)
+            L_high2lowmap = self.model(L_high, ratio_high2low_map)
 
-            I_low2high_np = I_low2highmap.detach().cpu().numpy()[0]
-            I_high2low_np = I_high2lowmap.detach().cpu().numpy()[0]
-            I_low_np = I_low_tensor.numpy()[0]
-            I_high_np = I_high_tensor.numpy()[0]
+            L_low2high_np = L_low2highmap.detach().cpu().numpy()[0]
+            L_high2low_np = L_high2lowmap.detach().cpu().numpy()[0]
+            L_low_np = L_low_tensor.numpy()[0]
+            L_high_np = L_high_tensor.numpy()[0]
 
-            sample_imgs = np.concatenate((I_low_np, I_high_np, I_high2low_np, I_low2high_np), axis=0)
+            sample_imgs = np.concatenate((L_low_np, L_high_np, L_high2low_np, L_low2high_np), axis=0)
             filepath = os.path.join(plot_dir, f'{name}_epoch_{epoch}.png')
             split_point = [0, 1, 2, 3, 4]
             sample(sample_imgs, split=split_point, figure_size=(2, 2), # WARN: imported sample from utils.py , there one in utils folder as well

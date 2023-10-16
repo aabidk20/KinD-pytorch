@@ -45,16 +45,16 @@ class RestoreTrainer(BaseTrainer):
                 iter_start_time = time.time()
 
                 if self.noDecom is True:
-                    for R_low_tensor, I_low_tensor, R_high_tensor, I_high_tensor, name in tqdm(self.dataloader):
+                    for R_low_tensor, L_low_tensor, R_high_tensor, L_high_tensor, name in tqdm(self.dataloader):
                         optimizer.zero_grad()
-                        I_low = I_low_tensor.to(self.device)
+                        L_low = L_low_tensor.to(self.device)
                         R_low = R_low_tensor.to(self.device)
                         R_high = R_high_tensor.to(self.device)
-                        R_restore = self.model(R_low, I_low)
+                        R_restore = self.model(R_low, L_low)
 
                         if idx % self.print_frequency == 0:
                             hook_number = iter
-                        loss = self.loss_fn(R_restore, R_high, hook=hook_number)
+                        loss = self.loss_fn(R_restore, R_high)
                         hook_number = -1
 
                         if idx % 30 == 0:
@@ -63,20 +63,20 @@ class RestoreTrainer(BaseTrainer):
                         optimizer.step()
                         idx += 1
                 else:
-                    for L_low_tensor, L_high_tensor, name in tqdm(self.dataloader):
+                    for I_low_tensor, I_high_tensor, name in tqdm(self.dataloader):
                         optimizer.zero_grad()
-                        L_low = L_low_tensor.to(self.device)
-                        L_high = L_high_tensor.to(self.device)
+                        I_low = I_low_tensor.to(self.device)
+                        I_high = I_high_tensor.to(self.device)
 
                         with torch.no_grad():
-                            R_low, I_low = self.decom_net(L_low)
-                            R_high, I_high = self.decom_net(L_high)
+                            R_low, L_low = self.decom_net(I_low)
+                            R_high, L_high = self.decom_net(I_high)
 
-                        R_restore = self.model(R_low, I_low)
+                        R_restore = self.model(R_low, L_low)
 
                         if idx % self.print_frequency == 0:
                             hook_number = iter
-                        loss = self.loss_fn(R_restore, R_high, hook=hook_number)
+                        loss = self.loss_fn(R_restore, R_high)
                         hook_number = -1
                         if idx % 30 == 0:
                             log(f'Epoch:{iter} | Step:{idx} | Loss:{loss.item()}')
@@ -106,41 +106,41 @@ class RestoreTrainer(BaseTrainer):
     def test(self, epoch=-1, plot_dir='./images/samples-restore'):
         self.model.eval()
         if self.noDecom:
-            for R_low_tensor, I_low_tensor, R_high_tensor, I_high_tensor, name in tqdm(self.dataloader_test):
-                I_low = I_low_tensor.to(self.device)
+            for R_low_tensor, L_low_tensor, R_high_tensor, L_high_tensor, name in tqdm(self.dataloader_test):
+                L_low = L_low_tensor.to(self.device)
                 R_low = R_low_tensor.to(self.device)
-                R_restore = self.model(R_low, I_low)
+                R_restore = self.model(R_low, L_low)
 
                 R_restore_np = R_restore.detach().cpu().numpy()[0]
-                I_low_np = I_low_tensor.numpy()[0]
+                L_low_np = L_low_tensor.numpy()[0]
                 R_low_np = R_low_tensor.numpy()[0]
                 R_high_np = R_high_tensor.numpy()[0]
-                sample_imgs = np.concatenate((I_low_np, R_low_np, R_restore_np, R_high_np), axis=0)
+                sample_imgs = np.concatenate((L_low_np, R_low_np, R_restore_np, R_high_np), axis=0)
 
                 filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
                 split_point = [0, 1, 4, 7, 10]
-                img_dim = I_low_np.shape[1:]
+                img_dim = L_low_np.shape[1:]
                 sample(sample_imgs, split=split_point, figure_size=(2, 2),
                        img_dim=img_dim, path=filepath, num=epoch)
         else:
-            for L_low_tensor, L_high_tensor, name in tqdm(self.dataloader_test):
-                L_low = L_low_tensor.to(self.device)
-                L_high = L_high_tensor.to(self.device)
+            for I_low_tensor, I_high_tensor, name in tqdm(self.dataloader_test):
+                I_low = I_low_tensor.to(self.device)
+                I_high = I_high_tensor.to(self.device)
 
-                R_low, I_low = self.decom_net(L_low)
-                R_high, I_high = self.decom_net(L_high)
+                R_low, L_low = self.decom_net(I_low)
+                R_high, L_high = self.decom_net(I_high)
 
-                R_restore = self.model(R_low, I_low)
+                R_restore = self.model(R_low, L_low)
 
                 R_restore_np = R_restore.detach().cpu().numpy()[0]
-                I_low_np = I_low.detach().cpu().numpy()[0]
+                L_low_np = L_low.detach().cpu().numpy()[0]
                 R_low_np = R_low.detach().cpu().numpy()[0]
                 R_high_np = R_high.detach().cpu().numpy()[0]
-                sample_imgs = np.concatenate((I_low_np, R_low_np, R_restore_np, R_high_np), axis=0)
+                sample_imgs = np.concatenate((L_low_np, R_low_np, R_restore_np, R_high_np), axis=0)
 
                 filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
                 split_point = [0, 1, 4, 7, 10]
-                img_dim = I_low_np.shape[1:]
+                img_dim = L_low_np.shape[1:]
                 sample(sample_imgs, split=split_point, figure_size=(2, 2),
                           img_dim=img_dim, path=filepath, num=epoch)
 

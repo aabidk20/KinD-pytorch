@@ -28,40 +28,40 @@ class KinD_Player(BaseTrainer):
     def test(self, target_b=0.70, plot_dir='./images/samples-KinD'):
         self.model.eval()
         self.model.to(device=self.device)
-        for L_low_tensor, name in self.dataloader_test:
-            L_low = L_low_tensor.to(self.device)
+        for I_low_tensor, name in self.dataloader_test:
+            I_low = I_low_tensor.to(self.device)
 
             if self.plot_more:
                 # Use DecomNet to decomposite Reflectance Map and Illumation Map
-                R_low, I_low = self.model.decom_net(L_low)
+                R_low, L_low = self.model.decom_net(I_low)
                 # Compute brightness ratio
-                bright_low = torch.mean(I_low)
-            else:
                 bright_low = torch.mean(L_low)
+            else:
+                bright_low = torch.mean(I_low)
             
             bright_high = torch.ones_like(bright_low) * target_b + 0.5 * bright_low
             ratio = torch.div(bright_high, bright_low)
             log(f"Brightness: {bright_high:.4f}\tIllumation Magnification: {ratio.item():.3f}")
             
-            R_final, I_final, output_final = self.model(L_low, ratio)
+            R_final, L_final, output_final = self.model(I_low, ratio)
 
             output_final_np = output_final.detach().cpu().numpy()[0]
-            L_low_np = L_low_tensor.numpy()[0]
+            I_low_np = I_low_tensor.numpy()[0]
             # Only plot result 
             filepath = os.path.join(plot_dir, f'{name[0]}.png')
             split_point = [0, 3]
-            img_dim = L_low_np.shape[1:]
+            img_dim = I_low_np.shape[1:]
             sample(output_final_np, split=split_point, figure_size=(1, 1), 
                         img_dim=img_dim, path=filepath)
 
             if self.plot_more:
                 R_final_np = R_final.detach().cpu().numpy()[0]
-                I_final_np = I_final.detach().cpu().numpy()[0]
+                L_final_np = L_final.detach().cpu().numpy()[0]
                 R_low_np = R_low.detach().cpu().numpy()[0]
-                I_low_np = I_low.detach().cpu().numpy()[0]
+                L_low_np = L_low.detach().cpu().numpy()[0]
                 
-                sample_imgs = np.concatenate( (R_low_np, I_low_np, L_low_np,
-                                            R_final_np, I_final_np, output_final_np), axis=0 )
+                sample_imgs = np.concatenate( (R_low_np, L_low_np, I_low_np,
+                                            R_final_np, L_final_np, output_final_np), axis=0 )
                 filepath = os.path.join(plot_dir, f'{name[0]}_extra.png')
                 split_point = [0, 3, 4, 7, 10, 11, 14]
                 img_dim = L_low_np.shape[1:]

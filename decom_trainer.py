@@ -50,18 +50,18 @@ class DecomTrainer(BaseTrainer):
                 hook_number = -1
                 iter_start_time = time.time()
 
-                for L_low_tensor, L_high_tensor, name in self.dataloader:
-                    L_low = L_low_tensor.to(self.device)
-                    L_high = L_high_tensor.to(self.device)
-                    R_low, I_low = self.model(L_low)
+                for I_low_tensor, I_high_tensor, name in self.dataloader:
+                    I_low = I_low_tensor.to(self.device)
+                    I_high = I_high_tensor.to(self.device)
+                    R_low, L_low = self.model(I_low)
                     ##############################################
                     # print(f'{R_low.shape=}, {I_low.shape=}, {L_low.shape=}')
                     # print(f'{R_low.dtype=}, {I_low.dtype=}, {L_low.dtype=}')
 
-                    R_high, I_high = self.model(L_high)
+                    R_high, L_high = self.model(I_high)
                     if idx % self.print_frequency == 0:
                         hook_number = -1
-                    loss = self.loss_fn(R_low, R_high, I_low, I_high, L_low, L_high, hook=hook_number)
+                    loss = self.loss_fn(R_low, R_high, L_low, L_high, I_low, I_high, hook=hook_number)
                     hook_number = -1  # NOTE: why are we setting hook_number to -1 in both cases?
 
                     if idx % 8 == 0:
@@ -93,29 +93,29 @@ class DecomTrainer(BaseTrainer):
     def test(self, epoch=-1, plot_dir='./images/samples-decom'):
         self.model.eval()
         hook = 0
-        for L_low_tensor, L_high_tensor, name in tqdm(self.dataloader_test):
-            L_low = L_low_tensor.to(self.device)
-            L_high = L_high_tensor.to(self.device)
-            R_low, I_low = self.model(L_low)
-            R_high, I_high = self.model(L_high)
+        for I_low_tensor, I_high_tensor, name in tqdm(self.dataloader_test):
+            I_low = I_low_tensor.to(self.device)
+            I_high = I_high_tensor.to(self.device)
+            R_low, L_low = self.model(I_low)
+            R_high, L_high = self.model(I_high)
 
             if epoch % (self.print_frequency * 10) == 0:
-                loss = self.loss_fn(R_low, R_high, I_low, I_high, L_low, L_high, hook)
+                loss = self.loss_fn(R_low, R_high, L_low, L_high, I_low, I_high, hook)
                 hook += 1
                 loss = 0
                 # WARN: Why are we setting loss to 0 here?
 
             R_low_np = R_low.detach().cpu().numpy()[0]
             R_high_np = R_high.detach().cpu().numpy()[0]
-            I_low_np = I_low.detach().cpu().numpy()[0]
-            I_high_np = I_high.detach().cpu().numpy()[0]
-            L_low_np = L_low_tensor.numpy()[0]
-            L_high_np = L_high_tensor.numpy()[0]
-            sample_imgs = np.concatenate((R_low_np, I_low_np, L_low_np,
-                                          R_high_np, I_high_np, L_high_np), axis=0)
+            L_low_np = L_low.detach().cpu().numpy()[0]
+            L_high_np = L_high.detach().cpu().numpy()[0]
+            I_low_np = I_low_tensor.numpy()[0]
+            I_high_np = I_high_tensor.numpy()[0]
+            sample_imgs = np.concatenate((R_low_np, L_low_np, I_low_np,
+                                          R_high_np, L_high_np, I_high_np), axis=0)
             filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
             split_point = [0, 3, 4, 7, 10, 11, 14]
-            img_dim = I_low_np.shape[1:]
+            img_dim = L_low_np.shape[1:]
             sample(sample_imgs, split=split_point, figure_size=(2, 3),
                    img_dim=img_dim, path=filepath, num=epoch)
 

@@ -23,87 +23,87 @@ class KinD_noDecom_Trainer(BaseTrainer):
         self.model.eval()
         self.model.to(device=self.device)
         if 'decom_net' in model._modules:
-            for L_low_tensor, L_high_tensor, name in self.dataloader_test:
-                L_low = L_low_tensor.to(self.device)
-                L_high = L_high_tensor.to(self.device)
+            for I_low_tensor, I_high_tensor, name in self.dataloader_test:
+                I_low = I_low_tensor.to(self.device)
+                I_high = I_high_tensor.to(self.device)
 
-                R_low, I_low = self.model.decom_net(L_low)
-                R_high, I_high = self.model.decom_net(L_high)
-                I_low_3 = torch.cat([I_low, I_low, I_low], dim=1)
-                I_high_3 = torch.cat([I_high, I_high, I_high], dim=1)
+                R_low, L_low = self.model.decom_net(I_low)
+                R_high, L_high = self.model.decom_net(I_high)
+                L_low_3 = torch.cat([L_low, L_low, L_low], dim=1)
+                L_high_3 = torch.cat([L_high, L_high, L_high], dim=1)
 
-                output_low = I_low_3 * R_low
-                output_high = I_high_3 * R_high
+                output_low = L_low_3 * R_low
+                output_high = L_high_3 * R_high
 
                 b = 0.7;
                 w = 0.5
-                bright_low = torch.mean(I_low)
+                bright_low = torch.mean(L_low)
                 # bright_high = torch.mean(I_high)
                 bright_high = torch.ones_like(bright_low) * b + bright_low * w
                 ratio = torch.div(bright_high, bright_low)
                 log(f"Brightness: {bright_high}\tIllumation Magnification: {ratio.item()}")
                 # ratio_map = torch.ones_like(I_low) * ratio
 
-                R_final, I_final, output_final = self.model(L_low, ratio)
+                R_final, L_final, output_final = self.model(I_low, ratio)
 
                 R_final_np = R_final.detach().cpu().numpy()[0]
-                I_final_np = I_final.detach().cpu().numpy()[0]
+                L_final_np = L_final.detach().cpu().numpy()[0]
                 R_low_np = R_low.detach().cpu().numpy()[0]
-                I_low_np = I_low.detach().cpu().numpy()[0]
+                L_low_np = L_low.detach().cpu().numpy()[0]
                 R_high_np = R_high.detach().cpu().numpy()[0]
-                I_high_np = I_high.detach().cpu().numpy()[0]
+                L_high_np = L_high.detach().cpu().numpy()[0]
                 output_final_np = output_final.detach().cpu().numpy()[0]
                 output_low_np = output_low.detach().cpu().numpy()[0]
                 output_high_np = output_high.detach().cpu().numpy()[0]
                 # ratio_map_np = ratio_map.detach().cpu().numpy()[0]
-                L_low_np = L_low_tensor.numpy()[0]
-                L_high_np = L_high_tensor.numpy()[0]
+                I_low_np = I_low_tensor.numpy()[0]
+                I_high_np = I_high_tensor.numpy()[0]
 
-                sample_imgs = np.concatenate((R_low_np, I_low_np, output_low_np, L_low_np,
-                                              R_high_np, I_high_np, output_high_np, L_high_np,
-                                              R_final_np, I_final_np, output_final_np, L_high_np), axis=0)
+                sample_imgs = np.concatenate((R_low_np, L_low_np, output_low_np, I_low_np,
+                                              R_high_np, L_high_np, output_high_np, I_high_np,
+                                              R_final_np, L_final_np, output_final_np, I_high_np), axis=0)
 
                 filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
                 split_point = [0, 3, 4, 7, 10, 13, 14, 17, 20, 23, 24, 27, 30]
-                img_dim = I_high_np.shape[1:]
+                img_dim = L_high_np.shape[1:]
                 sample(sample_imgs, split=split_point, figure_size=(3, 4),
                        img_dim=img_dim, path=filepath, num=epoch)
         else:
-            for R_low_tensor, I_low_tensor, R_high_tensor, I_high_tensor, name in self.dataloader_test:
+            for R_low_tensor, L_low_tensor, R_high_tensor, L_high_tensor, name in self.dataloader_test:
                 R_low = R_low_tensor.to(self.device)
                 R_high = R_high_tensor.to(self.device)
-                I_low = I_low_tensor.to(self.device)
-                I_high = I_high_tensor.to(self.device)
-                I_high_3 = torch.cat([I_high, I_high, I_high], dim=1)
-                output_high = I_high_3 * R_high
+                L_low = L_low_tensor.to(self.device)
+                L_high = L_high_tensor.to(self.device)
+                L_high_3 = torch.cat([L_high, L_high, L_high], dim=1)
+                output_high = L_high_3 * R_high
 
                 # while True:
                 #     b = float(input('请输入增强水平：'))
                 #     if b <= 0: break
                 b = 0.6;
                 w = 0.5
-                bright_low = torch.mean(I_low)
+                bright_low = torch.mean(L_low)
                 bright_high = torch.ones_like(bright_low) * b + bright_low * w
                 ratio = torch.div(bright_high, bright_low)
                 print(bright_high, ratio)
                 # ratio_map = torch.ones_like(I_low) * ratio
 
-                R_final, I_final, output_final = self.model(R_low, I_low, ratio)
+                R_final, L_final, output_final = self.model(R_low, L_low, ratio)
 
                 R_final_np = R_final.detach().cpu().numpy()[0]
-                I_final_np = I_final.detach().cpu().numpy()[0]
+                L_final_np = L_final.detach().cpu().numpy()[0]
                 output_final_np = output_final.detach().cpu().numpy()[0]
                 output_high_np = output_high.detach().cpu().numpy()[0]
                 # ratio_map_np = ratio_map.detach().cpu().numpy()[0]
-                I_high_np = I_high_tensor.numpy()[0]
+                L_high_np = L_high_tensor.numpy()[0]
                 R_high_np = R_high_tensor.numpy()[0]
 
-                sample_imgs = np.concatenate((R_high_np, I_high_np, output_high_np,
-                                              R_final_np, I_final_np, output_final_np), axis=0)
+                sample_imgs = np.concatenate((R_high_np, L_high_np, output_high_np,
+                                              R_final_np, L_final_np, output_final_np), axis=0)
 
                 filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
                 split_point = [0, 3, 4, 7, 10, 11, 14]
-                img_dim = I_high_np.shape[1:]
+                img_dim = L_high_np.shape[1:]
                 sample(sample_imgs, split=split_point, figure_size=(2, 3),
                        img_dim=img_dim, path=filepath, num=epoch)
 

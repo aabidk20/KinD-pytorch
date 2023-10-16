@@ -80,66 +80,66 @@ class DecomLoss(nn.Module):
     def reflectance_similarity(self, R_low, R_high):
         return torch.mean(torch.abs(R_low - R_high))
 
-    def illumination_smoothness(self, I, L, name='low', hook=-1): # mutual_i_input_loss #done
-        L_gray = 0.299 * L[:, 0, :, :] + 0.587 * L[:, 1, :, :] + 0.114 * L[:, 2, :, :]
-        L_gray = L_gray.unsqueeze(dim=1)
+    def illumination_smoothness(self, L, I, name='low', hook=-1): # mutual_i_input_loss #done
+        I_gray = 0.299 * I[:, 0, :, :] + 0.587 * I[:, 1, :, :] + 0.114 * I[:, 2, :, :]
+        I_gray = I_gray.unsqueeze(dim=1)
 
-        I_gradient_x = gradient(I, "x")
-        L_gradient_x = gradient(L_gray, "x")
-        epsilon = 0.01 * torch.ones_like(L_gradient_x)
-        Denominator_x = torch.max(L_gradient_x, epsilon)
-        x_loss = torch.abs(torch.div(I_gradient_x, Denominator_x))
+        L_gradient_x = gradient(L, "x")
+        I_gradient_x = gradient(I_gray, "x")
+        epsilon = 0.01 * torch.ones_like(I_gradient_x)
+        Denominator_x = torch.max(I_gradient_x, epsilon)
+        x_loss = torch.abs(torch.div(L_gradient_x, Denominator_x))
 
-        I_gradient_y = gradient(I, 'y')
-        L_gradient_y = gradient(L_gray, 'y')
-        Denominator_y = torch.max(L_gradient_y, epsilon)
-        y_loss = torch.abs(torch.div(I_gradient_y, Denominator_y))
+        L_gradient_y = gradient(L, 'y')
+        I_gradient_y = gradient(I_gray, 'y')
+        Denominator_y = torch.max(I_gradient_y, epsilon)
+        y_loss = torch.abs(torch.div(L_gradient_y, Denominator_y))
 
         mut_loss = torch.mean(x_loss + y_loss)
         if hook > -1:
-            feature_map_hook(I, L_gray, epsilon, I_gradient_x+I_gradient_y,
+            feature_map_hook(I, I_gray, epsilon, L_gradient_x+L_gradient_y,
                              Denominator_x+Denominator_y, x_loss+y_loss,
                              path=f'./images/samples-features/ilux_smooth_{name}_epoch{hook}.png')
         return mut_loss
 
-    def mutual_consistency(self, I_low, I_high, hook=-1):
-        low_gradient_x = gradient(I_low, 'x')
-        high_gradient_x = gradient(I_high, 'x')
+    def mutual_consistency(self, L_low, L_high, hook=-1):
+        low_gradient_x = gradient(L_low, 'x')
+        high_gradient_x = gradient(L_high, 'x')
         M_gradient_x = low_gradient_x + high_gradient_x
         x_loss = M_gradient_x * torch.exp(-10 * M_gradient_x) # NOTE: c is hardcoded as 10
         # NOTE: notice that setting c to zero will set x_loss = M_gradient_x, which is same as L1 loss
 
-        low_gradient_y = gradient(I_low, 'y')
-        high_gradient_y = gradient(I_high, 'y')
+        low_gradient_y = gradient(L_low, 'y')
+        high_gradient_y = gradient(L_high, 'y')
         M_gradient_y = low_gradient_y + high_gradient_y
         y_loss = M_gradient_y * torch.exp(-10 * M_gradient_y) #NOTE: c is hardcoded as 10
         mutual_loss = torch.mean(x_loss + y_loss)
         if hook > -1:
-            feature_map_hook(I_low, I_high, low_gradient_x+low_gradient_y,
+            feature_map_hook(L_low, L_high, low_gradient_x+low_gradient_y,
                              high_gradient_x+high_gradient_y, M_gradient_x+M_gradient_y,
                              x_loss+y_loss,
                              path=f'./images/samples-features/mutual_consist_epoch{hook}.png')
         return mutual_loss
 
-    def reconstruction_error(self, R_low, R_high, I_low_3, I_high_3, L_low, L_high):
+    def reconstruction_error(self, R_low, R_high, L_low_3, L_high_3, I_low, I_high):
         # print(f'{type(R_low)=}, {type(I_low_3)=}, {type(L_low)=}')
         # print(f'{type(R_high)=}, {type(I_high_3)=}, {type(L_high)=}')
         # print(I_low_3[0].shape)
         #WARN: I_low_3 is a tuple so using a hack
-        I_low_3 = I_low_3[0]
-        recon_loss_low = torch.mean(torch.abs(R_low * I_low_3 - L_low))
-        recon_loss_high = torch.mean(torch.abs(R_high * I_high_3 - L_high))
+        L_low_3 = L_low_3[0]
+        recon_loss_low = torch.mean(torch.abs(R_low * L_low_3 - I_low))
+        recon_loss_high = torch.mean(torch.abs(R_high * L_high_3 - I_high))
         recon_loss = recon_loss_low + recon_loss_high
         return recon_loss
 
-    def forward(self, R_low, R_high, I_low, I_high, L_low, L_high, hook=-1):
-        I_low_3 = torch.cat([I_low, I_low, I_low], dim=1), # WARN : IMP Check if dim=1 is correct
-        I_high_3 = torch.cat([I_high, I_high, I_high], dim=1)
-        recon_loss = self.reconstruction_error(R_low, R_high, I_low_3, I_high_3, L_low, L_high)
+    def forward(self, R_low, R_high, L_low, L_high, I_low, I_high, hook=-1):
+        L_low_3 = torch.cat([L_low, L_low, L_low], dim=1), # WARN : IMP Check if dim=1 is correct
+        L_high_3 = torch.cat([L_high, L_high, L_high], dim=1)
+        recon_loss = self.reconstruction_error(R_low, R_high, L_low_3, L_high_3, I_low, I_high)
         equal_R_loss = self.reflectance_similarity(R_low, R_high)
-        i_mutual_loss = self.mutual_consistency(I_low, I_high, hook=hook)
-        ilux_smooth_loss = self.illumination_smoothness(I_low, L_low, hook=hook) + \
-                            self.illumination_smoothness(I_high, L_high, name='high', hook=hook)
+        i_mutual_loss = self.mutual_consistency(L_low, L_high, hook=hook)
+        ilux_smooth_loss = self.illumination_smoothness(L_low, I_low, hook=hook) + \
+                            self.illumination_smoothness(L_high, I_high, name='high', hook=hook)
 
         decom_loss = recon_loss + 0.01 * equal_R_loss + 0.15 * ilux_smooth_loss + 0.2 * i_mutual_loss
         return decom_loss
@@ -155,9 +155,9 @@ class IllumLoss(nn.Module):
         grad_loss_all = torch.mean(x_loss + y_loss)
         return grad_loss_all
 
-    def forward(self, I_low, I_high, hook=-1):
-        loss_grad = self.grad_loss(I_low, I_high)
-        loss_recon = F.mse_loss(I_low, I_high)
+    def forward(self, L_low, L_high, hook=-1):
+        loss_grad = self.grad_loss(L_low, L_high)
+        loss_recon = F.mse_loss(L_low, L_high)
         loss_adjust = loss_recon + loss_grad
         return loss_adjust
 

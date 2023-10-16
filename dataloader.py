@@ -1,15 +1,3 @@
-import os
-import numpy as np
-import random
-import matplotlib.pyplot as plt
-import collections
-import torch
-import torchvision
-import cv2
-import shutil
-import time
-from PIL import Image
-import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 from utils import *
 
@@ -127,18 +115,18 @@ class LOLDataset_Decom(Dataset):
             self.pairs = f.readlines()
         self.files = []
         for pair in self.pairs:
-            lr_path_R, lr_path_I, hr_path_R, hr_path_I = pair.split(",")
-            hr_path_I = hr_path_I[:-1]
+            lr_path_R, lr_path_L, hr_path_R, hr_path_L = pair.split(",")
+            hr_path_L = hr_path_L[:-1]
             name = lr_path_R.split("\\")[-1][:-4]
             lr_file_R = os.path.join(self.root, lr_path_R)
-            lr_file_I = os.path.join(self.root, lr_path_I)
+            lr_file_L = os.path.join(self.root, lr_path_L)
             hr_file_R = os.path.join(self.root, hr_path_R)
-            hr_file_I = os.path.join(self.root, hr_path_I)
+            hr_file_L = os.path.join(self.root, hr_path_L)
             self.files.append({
                 "lr_R": lr_file_R,
-                "lr_I": lr_file_I,
+                "lr_L": lr_file_L,
                 "hr_R": hr_file_R,
-                "hr_I": hr_file_I,
+                "hr_L": hr_file_L,
                 "name": name
             })
         self.data = []
@@ -147,13 +135,13 @@ class LOLDataset_Decom(Dataset):
                 name = fileinfo["name"]
                 lr_img_R = Image.open(fileinfo["lr_R"])
                 hr_img_R = Image.open(fileinfo["hr_R"])
-                lr_img_I = Image.open(fileinfo["lr_I"]).convert('L')
-                hr_img_I = Image.open(fileinfo["hr_I"]).convert('L')
+                lr_img_L = Image.open(fileinfo["lr_L"]).convert('L')
+                hr_img_L = Image.open(fileinfo["hr_L"]).convert('L')
                 self.data.append({
                     "lr_R": lr_img_R,
-                    "lr_I": lr_img_I,
+                    "lr_L": lr_img_L,
                     "hr_R": hr_img_R,
-                    "hr_I": hr_img_I,
+                    "hr_L": hr_img_L,
                     "name": name
                 })
             log("Finished loading all images to RAM")
@@ -168,14 +156,14 @@ class LOLDataset_Decom(Dataset):
             name = datafiles["name"]
             lr_img_R = Image.open(datafiles["lr_R"])
             hr_img_R = Image.open(datafiles["hr_R"])
-            lr_img_I = Image.open(datafiles["lr_I"]).convert('L')
-            hr_img_I = Image.open(datafiles["hr_I"]).convert('L')
+            lr_img_L = Image.open(datafiles["lr_L"]).convert('L')
+            hr_img_L = Image.open(datafiles["hr_L"]).convert('L')
         else:  # data is in RAM
             name = self.data[idx]["name"]
             lr_img_R = self.data[idx]["lr_R"]
-            lr_img_I = self.data[idx]["lr_I"]
+            lr_img_L = self.data[idx]["lr_L"]
             hr_img_R = self.data[idx]["hr_R"]
-            hr_img_I = self.data[idx]["hr_I"]
+            hr_img_L = self.data[idx]["hr_L"]
 
         if self.crop_size > 0:
             h_offset = random.randint(0, lr_img_R.size[1] - self.crop_size)
@@ -183,25 +171,25 @@ class LOLDataset_Decom(Dataset):
 
             crop_box = (w_offset, h_offset, w_offset + self.crop_size, h_offset + self.crop_size)
             lr_crop_R = lr_img_R
-            lr_crop_I = lr_img_I
+            lr_crop_L = lr_img_L
             hr_crop_R = hr_img_R
-            hr_crop_I = hr_img_I
+            hr_crop_L = hr_img_L
             if self.training is True:
                 lr_crop_R = lr_crop_R.crop(crop_box)
-                lr_crop_I = lr_crop_I.crop(crop_box)
+                lr_crop_L = lr_crop_L.crop(crop_box)
                 hr_crop_R = hr_crop_R.crop(crop_box)
-                hr_crop_I = hr_crop_I.crop(crop_box)
+                hr_crop_L = hr_crop_L.crop(crop_box)
                 rand_mode = np.random.randint(0, 8)
                 lr_crop_R = data_augmentation(lr_crop_R, rand_mode)
-                lr_crop_I = data_augmentation(lr_crop_I, rand_mode)
+                lr_crop_L = data_augmentation(lr_crop_L, rand_mode)
                 hr_crop_R = data_augmentation(hr_crop_R, rand_mode)
-                hr_crop_I = data_augmentation(hr_crop_I, rand_mode)
+                hr_crop_L = data_augmentation(hr_crop_L, rand_mode)
 
         lr_crop_R = np.asarray(lr_crop_R, np.float32).transpose((2, 0, 1)) / 255.
-        lr_crop_I = np.expand_dims(np.asarray(lr_crop_I, np.float32), axis=0) / 255.
+        lr_crop_L = np.expand_dims(np.asarray(lr_crop_L, np.float32), axis=0) / 255.
         hr_crop_R = np.asarray(hr_crop_R, np.float32).transpose((2, 0, 1)) / 255.
-        hr_crop_I = np.expand_dims(np.asarray(hr_crop_I, np.float32), axis=0) / 255.
-        return lr_crop_R, lr_crop_I, hr_crop_R, hr_crop_I, name
+        hr_crop_L = np.expand_dims(np.asarray(hr_crop_L, np.float32), axis=0) / 255.
+        return lr_crop_R, lr_crop_L, hr_crop_R, hr_crop_L, name
 
 
 def build_LOLDataset_list_txt(dst_dir):
@@ -221,7 +209,7 @@ def build_LOLDataset_list_txt(dst_dir):
 def build_LOLDataset_Decom_list_txt(dst_dir):
     log(f"Building LOLDataset_Decom list txt in {dst_dir}")
     dir_lists = []
-    tail = ['low\\R', 'low\\I', 'high\\R', 'high\\I']
+    tail = ['low\\R', 'low\\L', 'high\\R', 'high\\L']
     for t in tail:
         dir_lists.append(os.path.join(dst_dir, t))
     img_path = [[], [], [], []]
@@ -231,8 +219,8 @@ def build_LOLDataset_Decom_list_txt(dst_dir):
             img_path[i].append(path)
     list_path = os.path.join(dst_dir, 'pair_list.csv')
     with open(list_path, 'w') as f:
-        for lr_R, lr_I, hr_R, hr_I in zip(*img_path):
-            f.write(f"{lr_R},{lr_I},{hr_R},{hr_I}\n")
+        for lr_R, lr_L, hr_R, hr_L in zip(*img_path):
+            f.write(f"{lr_R},{lr_L},{hr_R},{hr_L}\n")
     log(f"Finished building LOLDataset_Decom list txt in {dst_dir}.{len(img_path[0])} pairs in total")
     return list_path
 
@@ -240,9 +228,9 @@ def build_LOLDataset_Decom_list_txt(dst_dir):
 def divide_dataset(dst_dir):
     log(f"Dividing dataset in {dst_dir}")
     lr_dir_R = os.path.join(dst_dir, 'low', 'R')
-    lr_dir_I = os.path.join(dst_dir, 'low', 'I')
+    lr_dir_L = os.path.join(dst_dir, 'low', 'L')
     hr_dir_R = os.path.join(dst_dir, 'high', 'R')
-    hr_dir_I = os.path.join(dst_dir, 'high', 'I')
+    hr_dir_L = os.path.join(dst_dir, 'high', 'L')
 
     for name in os.listdir(dst_dir):
         path = os.path.join(dst_dir, name)
@@ -250,21 +238,21 @@ def divide_dataset(dst_dir):
         item = name.split('_')
         if item[0] == 'high' and item[-1] == 'R':
             shutil.move(path, os.path.join(hr_dir_R, item[1] + ext))
-        elif item[0] == 'high' and item[-1] == 'I':
-            shutil.move(path, os.path.join(hr_dir_I, item[1] + ext))
+        elif item[0] == 'high' and item[-1] == 'L':
+            shutil.move(path, os.path.join(hr_dir_L, item[1] + ext))
         elif item[0] == 'low' and item[-1] == 'R':
             shutil.move(path, os.path.join(lr_dir_R, item[1] + ext))
-        elif item[0] == 'low' and item[-1] == 'I':
-            shutil.move(path, os.path.join(lr_dir_I, item[1] + ext))
+        elif item[0] == 'low' and item[-1] == 'L':
+            shutil.move(path, os.path.join(lr_dir_L, item[1] + ext))
     log(f"Finished dividing dataset in {dst_dir}")
 
 
 def change_name(dst_dir):
     dir_lists = []
     dir_lists.append(os.path.join(dst_dir, 'low', 'R'))
-    dir_lists.append(os.path.join(dst_dir, 'low', 'I'))
+    dir_lists.append(os.path.join(dst_dir, 'low', 'L'))
     dir_lists.append(os.path.join(dst_dir, 'high', 'R'))
-    dir_lists.append(os.path.join(dst_dir, 'high', 'I'))
+    dir_lists.append(os.path.join(dst_dir, 'high', 'L'))
     for directory in dir_lists:
         for name in os.listdir(directory):
             path = os.path.join(directory, name)

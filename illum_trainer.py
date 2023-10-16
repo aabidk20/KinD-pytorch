@@ -44,24 +44,24 @@ class Illum_Trainer(BaseTrainer):
                 iter_start_time = time.time()
 
                 if self.noDecom is True:
-                    for R_low_tensor, I_low_tensor, R_high_tensor, I_high_tensor, name in tqdm(self.dataloader):
+                    for R_low_tensor, L_low_tensor, R_high_tensor, L_high_tensor, name in tqdm(self.dataloader):
                         optimizer.zero_grad()
-                        I_low = I_low_tensor.to(self.device)
-                        I_high = I_high_tensor.to(self.device)
+                        L_low = L_low_tensor.to(self.device)
+                        L_high = L_high_tensor.to(self.device)
                         with torch.no_grad():
-                            ratio_high2low = torch.mean(torch.div((I_low + 0.0001), (I_high + 0.0001)))
-                            # WARN: should it be like torch.mean(I_low + 0.0001) / torch.mean(I_high + 0.0001) ?
+                            ratio_high2low = torch.mean(torch.div((L_low + 0.0001), (L_high + 0.0001)))
+                            # WARN: should it be like torch.mean(L_low + 0.0001) / torch.mean(L_high + 0.0001) ?
 
-                            ratio_low2high = torch.mean(torch.div((I_high + 0.0001), (I_low + 0.0001)))
+                            ratio_low2high = torch.mean(torch.div((L_high + 0.0001), (L_low + 0.0001)))
 
-                        I_low2high_map = self.model(I_low, ratio_low2high)
-                        I_high2low_map = self.model(I_high, ratio_high2low)
+                        L_low2high_map = self.model(L_low, ratio_low2high)
+                        L_high2low_map = self.model(L_high, ratio_high2low)
                         # NOTE: what's happening here?
 
                         if idx % self.print_frequency == 0:
                             hook_number = iter
-                            loss = self.loss_fn(I_low2high_map, I_high, hook=hook_number) + self.loss_fn(I_high2low_map,
-                                                                                                         I_low,
+                            loss = self.loss_fn(L_low2high_map, L_high, hook=hook_number) + self.loss_fn(L_high2low_map,
+                                                                                                         L_low,
                                                                                                          hook=hook_number)
                             # NOTE: revise this part
 
@@ -73,27 +73,27 @@ class Illum_Trainer(BaseTrainer):
                             optimizer.step()
                             idx += 1
                 else:
-                    for L_low_tensor, L_high_tensor, name in tqdm(self.dataloader):
+                    for I_low_tensor, I_high_tensor, name in tqdm(self.dataloader):
                         optimizer.zero_grad()
-                        L_low = L_low_tensor.to(self.device)
-                        L_high = L_high_tensor.to(self.device)
+                        I_low = I_low_tensor.to(self.device)
+                        I_high = I_high_tensor.to(self.device)
 
                         #WARN: Turned off grad tracking
                         with torch.no_grad():
-                            R_low, I_low = self.decom_net(L_low)
-                            R_high, I_high = self.decom_net(L_high)
+                            R_low, L_low = self.decom_net(I_low)
+                            R_high, L_high = self.decom_net(I_high)
 
-                        bright_low = torch.mean(I_low)
-                        bright_high = torch.mean(I_high)
+                        bright_low = torch.mean(L_low)
+                        bright_high = torch.mean(L_high)
                         ratio_high2low = torch.div(bright_low, bright_high)
                         ratio_low2high = torch.div(bright_high, bright_low)
 
-                        I_low2high_map = self.model(I_low, ratio_low2high)
-                        I_high2low_map = self.model(I_high, ratio_high2low)
+                        L_low2high_map = self.model(L_low, ratio_low2high)
+                        L_high2low_map = self.model(L_high, ratio_high2low)
 
                         # print(f'{I_low2high_map.requires_grad=}, {I_high2low_map.requires_grad=}')
-                        loss = self.loss_fn(I_low2high_map, I_high, hook=hook_number) + \
-                               self.loss_fn(I_high2low_map, I_low, hook=hook_number)
+                        loss = self.loss_fn(L_low2high_map, L_high, hook=hook_number) + \
+                               self.loss_fn(L_high2low_map, L_low, hook=hook_number)
 
                         if idx % 30 == 0:
                             log(f'Epoch: {iter} | Step: {idx} \t average_loss: {loss.item():.6f}')
@@ -107,7 +107,7 @@ class Illum_Trainer(BaseTrainer):
                     self.test(iter, plot_dir='./images/samples-illum')
 
                 if iter % self.save_frequency == 0:
-                    torch.save(self.model.state_dict(), f'./weights/illum_net.pth')
+                    torch.save(self.model.state_dict(), f'../../../SIG/Code_Repos/KinD-pytorch/weights/illum_net.pth' )
                     log(f'Checkpoint {iter} saved for illum_net!')
 
                 scheduler.step()
@@ -125,60 +125,60 @@ class Illum_Trainer(BaseTrainer):
     def test(self, epoch=-1, plot_dir='./images/samples-illum'):
         self.model.eval()
         if self.noDecom:
-            for R_low_tensor, I_low_tensor, R_high_tensor, I_high_tensor, name in tqdm(self.dataloader_test):
-                I_low = I_low_tensor.to(self.device)
-                I_high = I_high_tensor.to(self.device)
+            for R_low_tensor, L_low_tensor, R_high_tensor, L_high_tensor, name in tqdm(self.dataloader_test):
+                L_low = L_low_tensor.to(self.device)
+                L_high = L_high_tensor.to(self.device)
 
-                ratio_high2low = torch.mean(torch.div((I_low + 0.0001), (I_high + 0.0001)))
-                ratio_low2high = torch.mean(torch.div((I_high + 0.0001), (I_low + 0.0001)))
+                ratio_high2low = torch.mean(torch.div((L_low + 0.0001), (L_high + 0.0001)))
+                ratio_low2high = torch.mean(torch.div((L_high + 0.0001), (L_low + 0.0001)))
                 print(ratio_low2high)
 
-                bright_low = torch.mean(I_low)
+                bright_low = torch.mean(L_low)
                 bright_high = torch.ones_like(bright_low) * 0.3 + bright_low * 0.55
                 ratio_high2low = torch.div(bright_low, bright_high)
                 ratio_low2high = torch.div(bright_high, bright_low)
                 print(ratio_low2high)
 
-                I_low2high_map = self.model(I_low, ratio_low2high)
-                I_high2low_map = self.model(I_high, ratio_high2low)
+                L_low2high_map = self.model(L_low, ratio_low2high)
+                L_high2low_map = self.model(L_high, ratio_high2low)
 
-                I_low2high_np = I_low2high_map.detach().cpu().numpy()[0]
-                I_high2low_np = I_high2low_map.detach().cpu().numpy()[0]
-                I_low_np = I_low_tensor.numpy()[0]
-                I_high_np = I_high_tensor.numpy()[0]
-                sample_imgs = np.concatenate((I_low_np, I_high_np, I_high2low_np, I_low2high_np), axis=0)
+                L_low2high_np = L_low2high_map.detach().cpu().numpy()[0]
+                L_high2low_np = L_high2low_map.detach().cpu().numpy()[0]
+                L_low_np = L_low_tensor.numpy()[0]
+                L_high_np = L_high_tensor.numpy()[0]
+                sample_imgs = np.concatenate((L_low_np, L_high_np, L_high2low_np, L_low2high_np), axis=0)
 
                 filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
                 split_point = [0, 1, 2, 3, 4]
-                img_dim = I_low_np.shape[1:]
+                img_dim = L_low_np.shape[1:]
                 sample(sample_imgs, split=split_point, figure_size=(2, 2),
                        img_dim=img_dim, path=filepath, num=epoch)
         else:
-            for L_low_tensor, L_high_tensor, name in tqdm(self.dataloader_test):
-                L_low = L_low_tensor.to(self.device)
-                L_high = L_high_tensor.to(self.device)
+            for I_low_tensor, I_high_tensor, name in tqdm(self.dataloader_test):
+                I_low = I_low_tensor.to(self.device)
+                I_high = I_high_tensor.to(self.device)
 
-                R_low, I_low = self.decom_net(L_low)
-                R_high, I_high = self.decom_net(L_high)
+                R_low, L_low = self.decom_net(I_low)
+                R_high, L_high = self.decom_net(I_high)
 
-                bright_low = torch.mean(I_low)
-                bright_high = torch.mean(I_high)
+                bright_low = torch.mean(L_low)
+                bright_high = torch.mean(L_high)
                 ratio_high2low = torch.div(bright_low, bright_high)
                 ratio_low2high = torch.div(bright_high, bright_low)
                 print(ratio_low2high)
 
-                I_low2high_map = self.model(I_low, ratio_low2high)
-                I_high2low_map = self.model(I_high, ratio_high2low)
+                L_low2high_map = self.model(L_low, ratio_low2high)
+                L_high2low_map = self.model(L_high, ratio_high2low)
 
-                I_low2high_np = I_low2high_map.detach().cpu().numpy()[0]
-                I_high2low_np = I_high2low_map.detach().cpu().numpy()[0]
-                I_low_np = I_low.detach().cpu().numpy()[0]
-                I_high_np = I_high.detach().cpu().numpy()[0]
+                L_low2high_np = L_low2high_map.detach().cpu().numpy()[0]
+                L_high2low_np = L_high2low_map.detach().cpu().numpy()[0]
+                L_low_np = L_low.detach().cpu().numpy()[0]
+                L_high_np = L_high.detach().cpu().numpy()[0]
 
-                sample_imgs = np.concatenate((I_low_np, I_high_np, I_high2low_np, I_low2high_np), axis=0)
+                sample_imgs = np.concatenate((L_low_np, L_high_np, L_high2low_np, L_low2high_np), axis=0)
                 filepath = os.path.join(plot_dir, f'{name[0]}_epoch_{epoch}.png')
                 split_point = [0, 1, 2, 3, 4]
-                img_dim = I_low_np.shape[1:]
+                img_dim = L_low_np.shape[1:]
                 sample(sample_imgs, split=split_point, figure_size=(2, 2),
                        img_dim=img_dim, path=filepath, num=epoch)
 
