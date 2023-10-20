@@ -13,4 +13,6 @@ class BaseParser:
         self.parser.add_argument("-c", "--checkpoint", default=True,
                                  help="Boolean flag to load checkpoint")
         # BUG: why is default for checkpoint True? is it a flag?
+        self.parser.add_argument("--res", default="unet", choices=["unet", "msia"],
+                                 help="Variant of RestoreNet")
         return self.parser.parse_args()

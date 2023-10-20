@@ -182,8 +182,8 @@ class RestoreLoss(nn.Module):
 
     def forward(self, R_low, R_high):
         loss_recon = F.mse_loss(R_low, R_high)
-        loss_ssim = 1 - self.ssim_loss(R_low, R_high)  # WARN: this is different from paper
-        loss_restore = loss_recon + loss_ssim + self.grad_loss(R_low, R_high)
+        loss_ssim = 1 - self.ssim_loss(R_low, R_high)
+        loss_restore = loss_recon + loss_ssim + self.grad_loss(R_low, R_high)   # WARN: this is different from paper
         return loss_restore
 
 

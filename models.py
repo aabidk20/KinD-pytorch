@@ -90,6 +90,65 @@ class IllumNet(nn.Module):
 
 # NOTE: skipped Restorenet_msia and custom_illum classes
 
+class RestoreNetMSIA(nn.Module):
+    def __init__(self, filters=16, activation='relu'):
+        super().__init__()
+        # Illumination Attention
+        self.i_input = nn.Conv2d(1, 1, kernel_size=3, padding=1)
+        self.i_att = nn.Sigmoid()
+        # NOTE: Revise this
+
+        #Layers
+        self.conv1_1 = Conv2DandReLU(3, filters, activation)
+        self.conv1_2 = Conv2DandReLU(filters, filters*2, activation)
+        self.msia1 = MSIA(filters*2, activation)
+
+        self.conv2_1 = Conv2DandReLU(filters*2, filters*4, activation)
+        self.conv2_2 = Conv2DandReLU(filters*4, filters*4, activation)
+        self.msia2 = MSIA(filters*4, activation)
+
+        self.conv3_1 = Conv2DandReLU(filters*4, filters*8, activation)
+        # NOTE: no dropout
+        self.conv3_2 = Conv2DandReLU(filters*8, filters*4, activation)
+        self.msia3 = MSIA(filters*4, activation)
+
+        self.conv4_1 = Conv2DandReLU(filters*4, filters*2, activation)
+        self.conv4_2 = Conv2DandReLU(filters*2, filters*2, activation)
+        self.msia4 = MSIA(filters*2, activation)
+
+        self.conv5_1 = Conv2DandReLU(filters*2, filters, activation)
+        self.conv5_2 = nn.Conv2d(filters, 3, kernel_size=3, padding=0)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, R, I):
+        i_input = self.i_input(I)
+        i_att = self.i_att(i_input)
+
+        #Network
+        conv1 = self.conv1_1(R)
+        conv1 = self.conv1_2(conv1)
+        msia1 = self.msia1(conv1, i_att)
+
+        conv2 = self.conv2_1(msia1)
+        conv2 = self.conv2_2(conv2)
+        msia2 = self.msia2(conv2, i_att)
+
+        conv3 = self.conv3_1(msia2)
+        conv3 = self.conv3_2(conv3)
+        msia3 = self.msia3(conv3, i_att)
+
+        conv4 = self.conv4_1(msia3)
+        conv4 = self.conv4_2(conv4)
+        msia4 = self.msia4(conv4, i_att)
+
+        conv5 = self.conv5_1(msia4)
+        conv5 = self.conv5_2(conv5)
+
+        R = self.sigmoid(conv5) # WARN: DIFF
+        return R
+
+
+
 class RestoreNet_Unet(nn.Module):
     """
     RestoreNet Class
@@ -238,7 +297,7 @@ class KinD_plus(nn.Module):
     def __init__(self, filters=32, activation='lrelu'):
         super().__init__()
         self.decom_net = DecomNet(filters, activation)
-        self.restore_net = RestoreNet_Unet(filters, activation)
+        self.restore_net = RestoreNetMSIA(filters, activation)
         self.illum_net = IllumNet(filters, activation)
 
     def forward(self, I, ratio):

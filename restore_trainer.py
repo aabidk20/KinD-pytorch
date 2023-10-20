@@ -88,14 +88,14 @@ class RestoreTrainer(BaseTrainer):
                     self.test(iter, plot_dir='./images/samples-restore')
 
                 if iter % self.save_frequency == 0:
-                    torch.save(self.model.state_dict(), f'./weights/restore_net.pth')
-                    log(f'Checkpoint {iter} saved for restore net!')
+                    torch.save(self.model.state_dict(), f'./weights/restore_net_{mode}.pth')
+                    log(f'Checkpoint {iter} saved for restore net {mode}!')
 
                 scheduler.step()
                 iter_end_time = time.time()
                 log(f'Time taken: {iter_end_time - iter_start_time} seconds\t lr: {scheduler.get_lr()}')
         except KeyboardInterrupt:
-            torch.save(self.model.state_dict(), f'./weights/restore_{iter}_inter.pth')
+            torch.save(self.model.state_dict(), f'./weights/restore_{mode}_{iter}_inter.pth')
             log('Saved model before quit')
             try:
                 sys.exit(0)
@@ -146,7 +146,6 @@ class RestoreTrainer(BaseTrainer):
 
 if __name__ == '__main__':
     criterion = RestoreLoss()
-    model = RestoreNet_Unet()
     decom_net = DecomNet()
     parser = BaseParser()
     args = parser.parse()
@@ -155,12 +154,19 @@ if __name__ == '__main__':
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
+    if args.res == 'unet':
+        model = RestoreNet_Unet()
+        mode = 'unet'
+    else:
+        model = RestoreNetMSIA()
+        mode = 'msia'
+
     weight_dir = config['weights_dir']
     if not os.path.exists(weight_dir):
         os.makedirs(weight_dir)
     if config['checkpoint'] is True:
         if config['noDecom'] is False:
-            pretrain_decom = torch.load(config['decom_net_path'])# WARN: changed path
+            pretrain_decom = torch.load(config['decom_net_path'], map_location='cpu')# WARN: changed path
             decom_net.load_state_dict(pretrain_decom)
             log(f'DecomNet loaded from {config["decom_net_path"]}')
         # pretrain = torch.load(config['restore_net_path'])# WARN: changed path

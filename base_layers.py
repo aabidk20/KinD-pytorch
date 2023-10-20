@@ -34,7 +34,7 @@ class MSIA(nn.Module):
         R : Reflectance
         I_att : Illumination attention
         """
-        R_att = R * I_att
+        R_att = R * I_att # WARN: why are we multiplying R and I_att?
 
         # Down 1
         msia_1 = self.conv_bn_relu1(R_att)
@@ -46,7 +46,7 @@ class MSIA(nn.Module):
 
         # Down 4
         down_4 = self.down_4(down_2)
-        conv_bn_relu_4 - self.conv_bn_relu4(down_4)
+        conv_bn_relu_4 = self.conv_bn_relu4(down_4)
         deconv_4 = self.deconv_4_1(conv_bn_relu_4)
         msia_4 = self.deconv_4_2(deconv_4)
 
@@ -63,7 +63,7 @@ class ConvBNReLU(nn.Module):
     Convolution + BatchNorm + ReLU
     """
 
-    def __int__(self, channels, activation='lrelu', kernel=3):
+    def __init__(self, channels, activation='lrelu', kernel=3):
         super().__init__()
         self.activation_layer = nn.LeakyReLU(inplace=True) if activation == 'lrelu' else nn.ReLU(inplace=True)
         self.conv_bn_relu = nn.Sequential(
